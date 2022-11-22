@@ -6,7 +6,7 @@ library(shinythemes)
 library(plotly)
 library(rapportools)
 library(openxlsx)
-
+library(rsconnect)
 
 ui <- dashboardPage(
   dashboardHeader(title = 'Bowl\'s hgRNA project'),
@@ -83,8 +83,8 @@ ui <- dashboardPage(
                            )
                           )
                          ),
-                         tabPanel('Plot', icon = icon('map')
-                           
+                         tabPanel('Plot', icon = icon('map'),
+                                plotlyOutput('point_plot')
                          )
               )
       )
@@ -111,9 +111,24 @@ server <- function(input, output, session) {
     ave_dCt<-readfile()[[input$target_gene]]['mean',]-readfile()[[input$control_gene]]['mean',]
     return(ave_dCt)
   })
-  Mean_dCt<-eventReactive(input$analyze,{
+  Mean_dCt<-eventReactive(input$control_samples,{
     as.numeric(mean(as.numeric(ave_dCt_table()[,input$control_samples])))
   })
+  control_ddCt_table<-eventReactive(input$control_samples,{
+    return(ddCt_table(ave_dCt_table(),input$control_samples))
+  })
+  sample_ddCt_table<-eventReactive(input$group_1,{
+    return(ddCt_table(ave_dCt_table(),input$group_1))
+  })
+  df<-eventReactive(input$analyze,{
+    df<-exprs_table(readfile(),input$control_gene,input$target_gene,input$control_samples,input$group_1)
+    return(df)
+  })
+  table_data<-eventReactive(input$analyze,{
+    table_data<-table_data(df)
+    return(table_data)
+  })
+  
 # Session  
 # show filename in the side bar
   output$filename<-renderTable({
@@ -178,21 +193,7 @@ server <- function(input, output, session) {
   })
   # Output Control ddCt and 2^ddCt
   output$control_ddCt_table<-renderTable(rownames = TRUE,{
-    dCt_list<-ave_dCt_table()[,input$control_samples]
-    ddCt<-NULL
-    exprs<-NULL
-    if (is.null(input$control_samples)){
-      NULL
-    } else
-   for (n in 1:length(dCt_list)){
-     ddCt<-c(ddCt,as.numeric(dCt_list[n])-mean(as.numeric(ave_dCt_table()[,input$control_samples])))
-     exprs<-2^(-ddCt)
-   }
-    ddCt_list<-data.frame(ddCt)
-    ddCt_list<-cbind(ddCt_list,exprs)
-    ddCt_list<-data.frame(t(ddCt_list))
-    colnames(ddCt_list)<-input$control_samples
-    return(ddCt_list)
+    return(ddCt_table(ave_dCt_table(),input$control_samples))
   })
   # Output Control raw data
   output$control_rawdata<-renderUI({
@@ -213,23 +214,9 @@ server <- function(input, output, session) {
   output$control_samples_table<-renderTable(rownames = TRUE,colnames = TRUE,{
     readfile()[[input$control_gene]][,input$control_samples]
   })
-  
+  # Output Sample ddCt table
   output$sample_ddCt_table<-renderTable(rownames = TRUE,{
-    dCt_list<-ave_dCt_table()[,input$group_1]
-    ddCt<-NULL
-    exprs<-NULL
-    if (is.null(input$group_1)){
-      NULL
-    } else
-      for (n in 1:length(dCt_list)){
-        ddCt<-c(ddCt,as.numeric(dCt_list[n])-mean(as.numeric(ave_dCt_table()[,input$control_samples])))
-        exprs<-2^(-ddCt)
-      }
-    ddCt_list<-data.frame(ddCt)
-    ddCt_list<-cbind(ddCt_list,exprs)
-    ddCt_list<-data.frame(t(ddCt_list))
-    colnames(ddCt_list)<-input$group_1
-    return(ddCt_list)
+    return(ddCt_table(ave_dCt_table(),input$group_1))
   })
   # Output Samples raw data
   output$Sample_rawdata<-renderUI({
@@ -246,9 +233,11 @@ server <- function(input, output, session) {
     })
     return(table_output_list)
   })
+  output$point_plot<-renderPlotly({
+    point_plot(df())
+  })
 
 }
 
 shinyApp(ui, server)
-
 
