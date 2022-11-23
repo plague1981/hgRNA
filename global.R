@@ -7,9 +7,10 @@ library(reshape2)
 # import excel data in to R
 read_data<-function(input){
   # extract gene names
+  input<-'Example.xlsx'
   gene_list<-getSheetNames(input)
   all_data<-lapply(1:length(gene_list), function(x) openxlsx::read.xlsx(xlsxFile = input, sheet = x,colNames = TRUE))
-
+  sample_names<-colnames(all_data[[1]])
   # change the list names to gene names
   names(all_data) <- gene_list
   # Add mean and sd
@@ -54,7 +55,7 @@ ddCt_table<-function(ave_dCt_table, samples){
     NULL
   } else
     for (n in 1:length(dCt_list)){
-      ddCt<-c(ddCt,as.numeric(dCt_list[n])-mean(as.numeric(ave_dCt_table[,control_samples])))
+      ddCt<-c(ddCt,as.numeric(dCt_list[n])-mean(as.numeric(ave_dCt_table[,input$control_samples])))
       exprs<-2^(-ddCt)
     }
   ddCt_list<-data.frame(ddCt)
@@ -81,7 +82,7 @@ exprs_table <- function(all_data,control_gene,target_gene,control_samples,sample
   return(df)
 }
 
-table_data <- function(df){
+express_table <- function(df){
   exprs_mean <- aggregate(as.numeric(df[,'exprs']), by=list(df$gp), FUN=mean)
   exprs_sd <- aggregate(as.numeric(df[,'exprs']), by=list(df$gp), FUN=sd)
   ds<-merge(exprs_mean,exprs_sd,by = 'Group.1')
@@ -90,8 +91,19 @@ table_data <- function(df){
 }
 
 point_plot <- function (df){
-  p<-ggplot2::ggplot(df, aes(x = gp, y = as.numeric(exprs)))+ ggtitle('hgRNA expression') +xlab('groups') +ylab('Relative Expression') +
-    geom_point(position = 'jitter',aes(shape=gp, color=gp),size=5)+ scale_shape_manual(values = c(15,16)) +
+  p<-ggplot2::ggplot(df, aes(x = gp, y = as.numeric(exprs)))+ 
+    # Figure title
+    ggtitle(input$plot_title) +
+    # x axis title
+    xlab(input$x_axis) +
+    # y axis title
+    ylab(input$y_axis) +
+    # white background
+    theme_classic() +
+    geom_point(position = 'jitter',aes(shape=gp, color=gp), size=5 )+ 
+    scale_shape_manual(values = c(input$shape_control,input$shape_sample)) +
+    scale_color_manual(values=c(input$color_control,input$color_sample)) +
+    # error bar
     stat_summary(fun.data=data_summary, geom='errorbar', color="red",width=.1)
 #  + stat_summary(fun.data=data_summary, geom='pointrange', color="red")
   return(p)

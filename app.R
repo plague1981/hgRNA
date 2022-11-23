@@ -7,6 +7,7 @@ library(plotly)
 library(rapportools)
 library(openxlsx)
 library(rsconnect)
+library(colourpicker)
 
 ui <- dashboardPage(
   dashboardHeader(title = 'Bowl\'s hgRNA project'),
@@ -84,7 +85,35 @@ ui <- dashboardPage(
                           )
                          ),
                          tabPanel('Plot', icon = icon('map'),
-                                plotlyOutput('point_plot')
+                           box( width = 1.5, title = 'Relative Expression',
+                                #actionButton(inputId = "get_plot", label = "Get Plot"),
+                                tableOutput('table_data')
+                           ),
+                           box( width = 5, title = 'Parameters',
+                                textInput(inputId = "plot_title", label = "Title",value = 'Title'),
+                                textInput(inputId = "x_axis", label = "x-axis", value = "x-axis"),
+                                textInput(inputId = "y_axis", label = "y-axis", value = "y-axis"),
+                                sliderInput(inputId = 'shape_control', label = 'control shape',min = 0,max = 26,value = 15),
+                                sliderInput(inputId = 'shape_sample', label = 'sample shape',min = 0,max = 26,value = 16),
+                                #textInput(inputId = "shape_control", label = "control shape (0-26)", value = 15),
+                                #textInput(inputId = "shape_sample", label = "sample shape (0-26)", value = 16),
+                                actionButton(inputId = "get_plot", label = "Get Plot")
+                           ),
+                           box( width = 5, title = 'legend color',
+                             div("Selected colour:", textOutput("value", inline = TRUE)),
+                             colourInput("color_control", "Choose control color", "black"),
+                             colourInput("color_sample", "Choose control color", "black"),
+                             #colourInput("col", "Choose color", "red"),
+                             #h3("Update colour input"),
+                             #textInput("text", "New colour: (colour name or HEX value)"),
+                             #selectInput("showColour", "Show colour", c("both", "text", "background")),
+                             #checkboxInput("allowTransparent", "Allow transparent", FALSE),
+                             #checkboxInput("returnName", "Return R colour name", FALSE),
+                             #actionButton("btn", "Update")
+                           ),
+                           box( width = 5, title = 'Plot',
+                             plotlyOutput('point_plot')
+                           )
                          )
               )
       )
@@ -120,16 +149,25 @@ server <- function(input, output, session) {
   sample_ddCt_table<-eventReactive(input$group_1,{
     return(ddCt_table(ave_dCt_table(),input$group_1))
   })
-  df<-eventReactive(input$analyze,{
+  df<-eventReactive(input$get_plot,{
     df<-exprs_table(readfile(),input$control_gene,input$target_gene,input$control_samples,input$group_1)
     return(df)
   })
-  table_data<-eventReactive(input$analyze,{
-    table_data<-table_data(df)
-    return(table_data)
+  table_data<-eventReactive(input$get_plot,{
+    table_data(df())
   })
   
-# Session  
+# Session
+  observeEvent(input$btn, {
+    updateColourInput(session, "col",
+                      #value = input$text, 
+                      showColour = "both"
+                      #allowTransparent = input$allowTransparent,
+                      #returnName = input$returnName
+                      )
+  })
+  output$value <- renderText(input$col)
+  
 # show filename in the side bar
   output$filename<-renderTable({
     input$file$name 
@@ -232,6 +270,9 @@ server <- function(input, output, session) {
       },rownames = TRUE)
     })
     return(table_output_list)
+  })
+  output$table_data<-renderTable({
+    express_table(df())
   })
   output$point_plot<-renderPlotly({
     point_plot(df())
