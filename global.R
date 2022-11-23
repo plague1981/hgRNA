@@ -7,7 +7,7 @@ library(reshape2)
 # import excel data in to R
 read_data<-function(input){
   # extract gene names
-  input<-'Example.xlsx'
+  #input<-'Example.xlsx'
   gene_list<-getSheetNames(input)
   all_data<-lapply(1:length(gene_list), function(x) openxlsx::read.xlsx(xlsxFile = input, sheet = x,colNames = TRUE))
   sample_names<-colnames(all_data[[1]])
