@@ -93,6 +93,7 @@ ui <- dashboardPage(
                                 textInput(inputId = "plot_title", label = "Title",value = 'Title'),
                                 textInput(inputId = "x_axis", label = "x-axis", value = "x-axis"),
                                 textInput(inputId = "y_axis", label = "y-axis", value = "y-axis"),
+                                selectInput(inputId = "legend_tag", label = "Legend:", choices = c("none", "left", "right", "bottom", "top"), selected = 'none'),
                                 sliderInput(inputId = 'shape_control', label = 'control shape',min = 0,max = 26,value = 15),
                                 sliderInput(inputId = 'shape_sample', label = 'sample shape',min = 0,max = 26,value = 16),
                                 #textInput(inputId = "shape_control", label = "control shape (0-26)", value = 15),
